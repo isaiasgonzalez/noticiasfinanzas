@@ -3,76 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard PM - Emerging & WS</title>
+    <title>Portfolio Manager | Live Feed</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .card { background: #1e1e1e; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db; }
         .card.red { border-left-color: #e74c3c; }
         .card.green { border-left-color: #2ecc71; }
-        h2 { margin-top: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
-        p { font-size: 1rem; line-height: 1.5; }
+        h2 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; color: #fff; }
+        p { font-size: 1rem; line-height: 1.5; color: #ccc; }
+        .val { font-weight: bold; color: #fff; }
         .timestamp { color: #888; font-size: 0.8rem; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-
     <h1>Portfolio Manager | Live Feed</h1>
-    <div class="timestamp" id="last-update">Actualizando...</div>
+    <div class="timestamp" id="last-update">Conectando con el backend...</div>
 
     <div class="grid">
-        <div class="card red" id="card-alerta">
+        <div class="card red">
             <h2>🚨 Alerta Roja</h2>
-            <p id="alerta-roja">Cargando eventos black swan...</p>
+            <p id="alerta-roja">Cargando eventos...</p>
         </div>
 
-        <div class="card" id="card-indices">
+        <div class="card">
             <h2>📈 Monitor de Índices</h2>
-            <p><strong>S&P 500:</strong> <span id="sp500">-</span></p>
-            <p><strong>Nasdaq:</strong> <span id="nasdaq">-</span></p>
-            <p><strong>Merval / Riesgo País:</strong> <span id="merval">-</span></p>
+            <p>S&P 500: <span class="val" id="sp500">-</span></p>
+            <p>Nasdaq: <span class="val" id="nasdaq">-</span></p>
+            <p>Merval: <span class="val" id="merval">-</span></p>
+            <p>Riesgo País: <span class="val" id="riesgo-pais">-</span> pts</p>
         </div>
 
-        <div class="card" id="card-arg">
+        <div class="card">
             <h2>🇦🇷 Contexto Argentino</h2>
-            <p id="brecha">-</p>
+            <p class="val" id="brecha">-</p>
             <p id="bcra">-</p>
         </div>
 
         <div class="card green" id="card-sentimiento">
-            <h2>🧠 Sentimiento de Mercado</h2>
-            <p id="sentimiento" style="font-weight: bold; font-size: 1.5rem;">-</p>
+            <h2>🧠 Sentimiento</h2>
+            <p id="sentimiento" style="font-size: 1.5rem; font-weight: bold;">-</p>
         </div>
     </div>
 
     <script>
-        async function fetchDashboard() {
-            try {
-                // Llama al backend local
-                const response = await fetch('https://noticiasfinanzas.onrender.com/api/dashboard');
-                const data = await response.json();
+    async function fetchDashboard() {
+        try {
+            const response = await fetch('https://noticiasfinanzas.onrender.com/api/dashboard');
+            const data = await response.json();
 
-                document.getElementById('alerta-roja').innerHTML = data.alerta_roja.join('<br><br>');
-                document.getElementById('sp500').innerText = data.indices.sp500;
-                document.getElementById('nasdaq').innerText = data.indices.nasdaq;
-                document.getElementById('merval').innerText = data.indices.merval_proxy;
-                
-                document.getElementById('brecha').innerText = data.contexto_arg.brecha;
-                document.getElementById('bcra').innerText = data.contexto_arg.bcra;
-                
-                const sentEl = document.getElementById('sentimiento');
-                sentEl.innerText = data.sentimiento;
-                sentEl.style.color = data.sentimiento.includes('Risk-on') ? '#2ecc71' : '#e74c3c';
-
-                document.getElementById('last-update').innerText = "Última actualización: " + new Date().toLocaleTimeString();
-            } catch (error) {
-                console.error("Error trayendo data. Fijate si el backend está levantado.", error);
+            // 1. Alerta Roja
+            if (data.alerta_roja && Array.isArray(data.alerta_roja)) {
+                let alertasHtml = data.alerta_roja.map(n => `<strong>${n.titulo}</strong><br><em>${n.impacto || ''}</em>: ${n.justificacion || ''}`).join('<br><br>');
+                document.getElementById('alerta-roja').innerHTML = alertasHtml;
             }
-        }
 
-        // Ejecutar al inicio y luego cada 3 minutos (180000 ms)
-        fetchDashboard();
-        setInterval(fetchDashboard, 180000);
-    </script>
+            // 2. Índices
+            if (data.indices) {
+                document.getElementById('sp500').innerText = `${data.indices.sp500?.val || '-'} (${data.indices.sp500?.var || '-'}%)`;
+                document.getElementById('nasdaq').innerText = `${data.indices.nasdaq?.val || '-'} (${data.indices.nasdaq?.var || '-'}%)`;
+                document.getElementById('merval').innerText = `${data.indices.merval?.val || '-'} (${data.indices.merval?.var || '-'}%)`;
+                document.getElementById('riesgo-pais').innerText = data.indices.riesgo_pais || '-';
+            }
+
+            // 3. Contexto Argentino
+            if (data.contexto_arg) {
+                document.getElementById('brecha').innerText = `CCL: $${data.contexto_arg.dolares?.ccl?.val || '-'} (${data.contexto_arg.dolares?.ccl?.var || '-'}%) | Oficial: $${data.contexto_arg.dolares?.oficial?.val || '-'}`;
+                
+                if (data.contexto_arg.noticias && Array.isArray(data.contexto_arg.noticias)) {
+                    let noticiasArgHtml = data.contexto_arg.noticias.map(n => `<strong>${n.titulo}</strong>`).join('<br>');
+                    document.getElementById('bcra').innerHTML = noticiasArgHtml;
+                }
+            }
+
+            // 4. Sentimiento
+            const sentEl = document.getElementById('sentimiento');
+            
+            // Validación por si el backend manda un string crudo o el objeto nuevo
+            if (typeof data.sentimiento === 'string') {
+                sentEl.innerHTML = data.sentimiento;
+                sentEl.style.color = data.sentimiento.includes('Bullish') ? '#2ecc71' : '#e74c3c';
+            } else if (data.sentimiento && data.sentimiento.estado) {
+                sentEl.innerHTML = `${data.sentimiento.estado}<br><span style="font-size: 0.8rem; font-weight: normal; color: #ccc;">${data.sentimiento.justificacion}</span>`;
+                sentEl.style.color = data.sentimiento.estado.includes('Bullish') ? '#2ecc71' : '#e74c3c';
+            }
+
+            document.getElementById('last-update').innerText = "Última actualización: " + new Date().toLocaleTimeString();
+        } catch (error) {
+            console.error("Error trayendo data. Fijate si el backend está levantado.", error);
+        }
+    }
+
+    // Acá estaba el error, ahora llama a la función correcta
+    fetchDashboard();
+    setInterval(fetchDashboard, 180000);
+    </script>   
 </body>
 </html>
