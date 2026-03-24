@@ -1,102 +1,902 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Manager | Live Feed</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db; }
-        .card.red { border-left-color: #e74c3c; }
-        .card.green { border-left-color: #2ecc71; }
-        h2 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; color: #fff; }
-        p { font-size: 1rem; line-height: 1.5; color: #ccc; }
-        .val { font-weight: bold; color: #fff; }
-        .timestamp { color: #888; font-size: 0.8rem; margin-bottom: 20px; }
-    </style>
-</head>
-<body>
-    <h1>Portfolio Manager | Live Feed</h1>
-    <div class="timestamp" id="last-update">Conectando con el backend...</div>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio Manager · Live Feed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ═══════════════════════ RESET & BASE ═══════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <div class="grid">
-        <div class="card red">
-            <h2>🚨 Alerta Roja</h2>
-            <p id="alerta-roja">Cargando eventos...</p>
-        </div>
-
-        <div class="card">
-            <h2>📈 Monitor de Índices</h2>
-            <p>S&P 500: <span class="val" id="sp500">-</span></p>
-            <p>Nasdaq: <span class="val" id="nasdaq">-</span></p>
-            <p>Merval: <span class="val" id="merval">-</span></p>
-            <p>Riesgo País: <span class="val" id="riesgo-pais">-</span> pts</p>
-        </div>
-
-        <div class="card">
-            <h2>🇦🇷 Contexto Argentino</h2>
-            <p class="val" id="brecha">-</p>
-            <p id="bcra">-</p>
-        </div>
-
-        <div class="card green" id="card-sentimiento">
-            <h2>🧠 Sentimiento</h2>
-            <p id="sentimiento" style="font-size: 1.5rem; font-weight: bold;">-</p>
-        </div>
-    </div>
-
-    <script>
-    async function fetchDashboard() {
-        try {
-            const response = await fetch('https://noticiasfinanzas.onrender.com/api/dashboard');
-            const data = await response.json();
-
-            // 1. Alerta Roja
-            if (data.alerta_roja && Array.isArray(data.alerta_roja)) {
-                let alertasHtml = data.alerta_roja.map(n => `<strong>${n.titulo}</strong><br><em>${n.impacto || ''}</em>: ${n.justificacion || ''}`).join('<br><br>');
-                document.getElementById('alerta-roja').innerHTML = alertasHtml;
-            }
-
-            // 2. Índices
-            if (data.indices) {
-                document.getElementById('sp500').innerText = `${data.indices.sp500?.val || '-'} (${data.indices.sp500?.var || '-'}%)`;
-                document.getElementById('nasdaq').innerText = `${data.indices.nasdaq?.val || '-'} (${data.indices.nasdaq?.var || '-'}%)`;
-                document.getElementById('merval').innerText = `${data.indices.merval?.val || '-'} (${data.indices.merval?.var || '-'}%)`;
-                document.getElementById('riesgo-pais').innerText = data.indices.riesgo_pais || '-';
-            }
-
-            // 3. Contexto Argentino
-            if (data.contexto_arg) {
-                document.getElementById('brecha').innerText = `CCL: $${data.contexto_arg.dolares?.ccl?.val || '-'} (${data.contexto_arg.dolares?.ccl?.var || '-'}%) | Oficial: $${data.contexto_arg.dolares?.oficial?.val || '-'}`;
-                
-                if (data.contexto_arg.noticias && Array.isArray(data.contexto_arg.noticias)) {
-                    let noticiasArgHtml = data.contexto_arg.noticias.map(n => `<strong>${n.titulo}</strong>`).join('<br>');
-                    document.getElementById('bcra').innerHTML = noticiasArgHtml;
-                }
-            }
-
-            // 4. Sentimiento
-            const sentEl = document.getElementById('sentimiento');
-            
-            // Validación por si el backend manda un string crudo o el objeto nuevo
-            if (typeof data.sentimiento === 'string') {
-                sentEl.innerHTML = data.sentimiento;
-                sentEl.style.color = data.sentimiento.includes('Bullish') ? '#2ecc71' : '#e74c3c';
-            } else if (data.sentimiento && data.sentimiento.estado) {
-                sentEl.innerHTML = `${data.sentimiento.estado}<br><span style="font-size: 0.8rem; font-weight: normal; color: #ccc;">${data.sentimiento.justificacion}</span>`;
-                sentEl.style.color = data.sentimiento.estado.includes('Bullish') ? '#2ecc71' : '#e74c3c';
-            }
-
-            document.getElementById('last-update').innerText = "Última actualización: " + new Date().toLocaleTimeString();
-        } catch (error) {
-            console.error("Error trayendo data. Fijate si el backend está levantado.", error);
-        }
+    :root {
+      --bg:        #06070d;
+      --bg2:       #0d0f1a;
+      --bg3:       #12152100;
+      --border:    #1e2235;
+      --border2:   #2a2f4a;
+      --text:      #c8cfe8;
+      --text2:     #7880a0;
+      --text3:     #444966;
+      --green:     #00e676;
+      --green-dim: #00a854;
+      --red:       #ff3d5a;
+      --red-dim:   #c0002f;
+      --amber:     #ffc107;
+      --cyan:      #00b8d9;
+      --cyan-dim:  #006880;
+      --orange:    #ff7043;
+      --white:     #e8eaf6;
+      --mono:      'IBM Plex Mono', monospace;
+      --sans:      'IBM Plex Sans', sans-serif;
     }
 
-    // Acá estaba el error, ahora llama a la función correcta
-    fetchDashboard();
-    setInterval(fetchDashboard, 180000);
-    </script>   
+    html { font-size: 14px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════ SCANLINE EFFECT ═══════════════════════ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.08) 2px,
+        rgba(0,0,0,.08) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ═══════════════════════ TOPBAR ═══════════════════════ */
+    .topbar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 28px; height: 28px;
+      background: var(--cyan);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-family: var(--mono);
+      font-size: .85rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      color: var(--white);
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      font-family: var(--mono);
+      font-size: .68rem;
+      color: var(--text2);
+      letter-spacing: .08em;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+
+    .timestamp-label {
+      font-family: var(--mono);
+      font-size: .7rem;
+      color: var(--text2);
+    }
+
+    .refresh-btn {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--cyan);
+      font-family: var(--mono);
+      font-size: .7rem;
+      padding: 5px 12px;
+      cursor: pointer;
+      letter-spacing: .06em;
+      transition: all .2s;
+    }
+    .refresh-btn:hover {
+      background: rgba(0,184,217,.1);
+      border-color: var(--cyan);
+    }
+
+    /* ═══════════════════════ TICKER TAPE ═══════════════════════ */
+    .ticker-tape {
+      background: #080a14;
+      border-bottom: 1px solid var(--border);
+      height: 32px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .ticker-inner {
+      display: flex;
+      gap: 0;
+      animation: scroll-ticker 60s linear infinite;
+      white-space: nowrap;
+      height: 100%;
+      align-items: center;
+    }
+
+    .ticker-inner:hover { animation-play-state: paused; }
+
+    @keyframes scroll-ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    .ticker-item {
+      font-family: var(--mono);
+      font-size: .72rem;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-right: 1px solid var(--border);
+      height: 100%;
+    }
+
+    .ticker-name { color: var(--text2); letter-spacing: .05em; }
+    .ticker-val  { color: var(--white); font-weight: 500; }
+    .ticker-var  { font-size: .68rem; }
+    .up   { color: var(--green); }
+    .down { color: var(--red); }
+    .flat { color: var(--text2); }
+
+    /* ═══════════════════════ MAIN GRID ═══════════════════════ */
+    .main {
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 16px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; padding: 12px; }
+    }
+
+    /* ═══════════════════════ CARDS ═══════════════════════ */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--cyan);
+    }
+
+    .card.red-card::before   { background: var(--red); }
+    .card.green-card::before { background: var(--green); }
+    .card.amber-card::before { background: var(--amber); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px 10px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.015);
+    }
+
+    .card-title {
+      font-family: var(--mono);
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .card-badge {
+      font-family: var(--mono);
+      font-size: .62rem;
+      padding: 2px 8px;
+      border: 1px solid var(--border2);
+      color: var(--text2);
+      letter-spacing: .06em;
+    }
+
+    .card-body { padding: 14px 16px 14px 20px; }
+
+    /* SPAN FULL WIDTH */
+    .full-width { grid-column: 1 / -1; }
+
+    /* ═══════════════════════ ÍNDICES ═══════════════════════ */
+    .indices-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+    }
+
+    @media (max-width: 700px) {
+      .indices-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .index-cell {
+      padding: 12px 14px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .index-cell:nth-child(4n) { border-right: none; }
+    .index-cell:nth-last-child(-n+4) { border-bottom: none; }
+
+    .index-name {
+      font-family: var(--mono);
+      font-size: .65rem;
+      color: var(--text2);
+      letter-spacing: .08em;
+      margin-bottom: 6px;
+    }
+
+    .index-value {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--white);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .index-var {
+      font-family: var(--mono);
+      font-size: .75rem;
+      font-weight: 500;
+    }
+
+    .index-bar {
+      height: 2px;
+      background: var(--border);
+      margin-top: 8px;
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .index-bar-fill {
+      height: 100%;
+      border-radius: 1px;
+      transition: width .8s ease;
+    }
+
+    /* ═══════════════════════ NOTICIAS ═══════════════════════ */
+    .news-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+    }
+
+    .news-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .news-badge {
+      font-family: var(--mono);
+      font-size: .6rem;
+      padding: 3px 6px;
+      align-self: start;
+      white-space: nowrap;
+      font-weight: 600;
+      letter-spacing: .04em;
+      margin-top: 1px;
+    }
+
+    .news-badge.bearish { background: rgba(255,61,90,.15); color: var(--red); border: 1px solid rgba(255,61,90,.3); }
+    .news-badge.bullish { background: rgba(0,230,118,.12); color: var(--green); border: 1px solid rgba(0,230,118,.3); }
+    .news-badge.neutral { background: rgba(200,207,232,.06); color: var(--text2); border: 1px solid var(--border2); }
+
+    .news-content {}
+
+    .news-title {
+      font-size: .82rem;
+      color: var(--white);
+      line-height: 1.4;
+      margin-bottom: 3px;
+    }
+
+    .news-title a {
+      color: inherit;
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .news-title a:hover { color: var(--cyan); }
+
+    .news-meta {
+      font-family: var(--mono);
+      font-size: .62rem;
+      color: var(--text3);
+    }
+
+    .news-just {
+      font-size: .72rem;
+      color: var(--text2);
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    /* ═══════════════════════ DÓLARES ═══════════════════════ */
+    .fx-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .fx-cell {
+      padding: 10px 12px;
+      border-right: 1px solid var(--border);
+      text-align: center;
+    }
+    .fx-cell:last-child { border-right: none; }
+
+    .fx-name {
+      font-family: var(--mono);
+      font-size: .62rem;
+      color: var(--text2);
+      letter-spacing: .1em;
+      margin-bottom: 4px;
+    }
+
+    .fx-val {
+      font-family: var(--mono);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .fx-var {
+      font-family: var(--mono);
+      font-size: .7rem;
+      margin-top: 2px;
+    }
+
+    /* ═══════════════════════ RIESGO PAÍS ═══════════════════════ */
+    .rp-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+    .rp-label {
+      font-family: var(--mono);
+      font-size: .65rem;
+      color: var(--text2);
+      letter-spacing: .06em;
+    }
+    .rp-val {
+      font-family: var(--mono);
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--amber);
+    }
+
+    /* ═══════════════════════ SENTIMIENTO ═══════════════════════ */
+    .sentiment-estado {
+      font-family: var(--mono);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+
+    .sentiment-score {
+      font-family: var(--mono);
+      font-size: .68rem;
+      color: var(--text2);
+      margin-bottom: 14px;
+    }
+
+    .sentiment-factors {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .factor-item {
+      font-size: .78rem;
+      color: var(--text);
+      line-height: 1.45;
+      padding-left: 12px;
+      border-left: 2px solid var(--border2);
+    }
+
+    /* ═══════════════════════ LOADING / ERROR ═══════════════════════ */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9000;
+      gap: 16px;
+      transition: opacity .4s;
+    }
+
+    .loading-overlay.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-family: var(--mono);
+      font-size: .75rem;
+      color: var(--text2);
+      letter-spacing: .1em;
+    }
+
+    /* ═══════════════════════ COUNTDOWN ═══════════════════════ */
+    .countdown {
+      font-family: var(--mono);
+      font-size: .65rem;
+      color: var(--text3);
+    }
+
+    /* ═══════════════════════ CORNER DECORATION ═══════════════════════ */
+    .card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 20px; height: 20px;
+      border-bottom: 1px solid var(--border2);
+      border-right: 1px solid var(--border2);
+    }
+
+    /* ═══════════════════════ SCROLLBAR ═══════════════════════ */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    /* ═══════════════════════ TRANSITION DATA ═══════════════════════ */
+    .data-flash {
+      animation: flash .4s ease;
+    }
+    @keyframes flash {
+      0%   { background: rgba(0,184,217,.12); }
+      100% { background: transparent; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">FETCHING MARKET DATA...</div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-logo"></div>
+    <div>
+      <div class="brand-title">Portfolio Manager</div>
+      <div class="brand-sub">LIVE MARKET INTELLIGENCE FEED</div>
+    </div>
+  </div>
+  <div class="topbar-meta">
+    <div class="status-dot" id="status-dot"></div>
+    <div class="timestamp-label" id="last-update">—</div>
+    <div class="countdown" id="countdown"></div>
+    <button class="refresh-btn" onclick="fetchDashboard(true)">↻ REFRESH</button>
+  </div>
+</div>
+
+<!-- TICKER TAPE (duplicado para loop infinito) -->
+<div class="ticker-tape">
+  <div class="ticker-inner" id="ticker-inner">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main">
+
+  <!-- ── ALERTA ROJA ── -->
+  <div class="card red-card full-width">
+    <div class="card-header">
+      <div class="card-title">🚨 Alerta Roja · Eventos de Alto Impacto</div>
+      <div class="card-badge" id="alerta-badge">—</div>
+    </div>
+    <div class="card-body">
+      <div id="alerta-roja-list">
+        <div style="color:var(--text2); font-size:.8rem; font-family:var(--mono);">Cargando noticias...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ÍNDICES ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📊 Monitor de Índices</div>
+      <div class="card-badge">INTRADAY Δ</div>
+    </div>
+    <div class="indices-grid" id="indices-grid">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- ── CONTEXTO ARGENTINO ── -->
+  <div class="card amber-card">
+    <div class="card-header">
+      <div class="card-title">🇦🇷 Contexto Argentino</div>
+      <div class="card-badge">FX · DEUDA · MACRO</div>
+    </div>
+    <div class="card-body">
+      <div class="fx-grid" id="fx-grid">
+        <!-- populated by JS -->
+      </div>
+      <div class="rp-row">
+        <div class="rp-label">RIESGO PAÍS (EMBI+)</div>
+        <div class="rp-val" id="riesgo-val">—</div>
+        <div class="index-var" id="riesgo-var"></div>
+      </div>
+      <div id="arg-noticias-list">
+        <div style="color:var(--text2); font-size:.8rem; font-family:var(--mono);">Cargando noticias...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SENTIMIENTO ── -->
+  <div class="card" id="card-sentimiento">
+    <div class="card-header">
+      <div class="card-title">🧠 Sentimiento de Mercado</div>
+      <div class="card-badge" id="sent-score-badge">SCORE: —</div>
+    </div>
+    <div class="card-body">
+      <div class="sentiment-estado" id="sent-estado">—</div>
+      <div class="sentiment-factors" id="sent-factors">
+        <div class="factor-item" style="color:var(--text2)">Cargando análisis...</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ─────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────
+const API_URL   = 'https://noticiasfinanzas.onrender.com/api/dashboard';
+const INTERVAL  = 3 * 60 * 1000; // 3 minutos
+let   countdown = INTERVAL / 1000;
+let   countdownTimer;
+
+// ─────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function varClass(v) {
+  const n = parseFloat(v);
+  if (isNaN(n) || n === 0) return 'flat';
+  return n > 0 ? 'up' : 'down';
+}
+
+function varArrow(v) {
+  const n = parseFloat(v);
+  if (isNaN(n) || n === 0) return '';
+  return n > 0 ? '▲' : '▼';
+}
+
+function varColor(v) {
+  const c = varClass(v);
+  if (c === 'up')   return 'var(--green)';
+  if (c === 'down') return 'var(--red)';
+  return 'var(--text2)';
+}
+
+function sentimentColor(color) {
+  const map = {
+    green:   'var(--green)',
+    red:     'var(--red)',
+    yellow:  'var(--amber)',
+    orange:  'var(--orange)',
+    neutral: 'var(--text2)'
+  };
+  return map[color] || 'var(--text2)';
+}
+
+function badgeClass(impacto) {
+  if (impacto.includes('Bearish')) return 'bearish';
+  if (impacto.includes('Bullish')) return 'bullish';
+  return 'neutral';
+}
+
+function barWidth(varPct) {
+  const n = Math.abs(parseFloat(varPct) || 0);
+  return Math.min(n * 20, 100); // scale: 5% var = full bar
+}
+
+function flash(el) {
+  el.classList.remove('data-flash');
+  void el.offsetWidth;
+  el.classList.add('data-flash');
+}
+
+// ─────────────────────────────────────────────────────────
+// TICKER TAPE
+// ─────────────────────────────────────────────────────────
+function buildTicker(indices) {
+  const items = [
+    { name: 'S&P 500',  ...indices.sp500  },
+    { name: 'NASDAQ',   ...indices.nasdaq },
+    { name: 'MERVAL',   ...indices.merval },
+    { name: 'VIX',      ...indices.vix    },
+    { name: 'WTI',      ...indices.wti    },
+    { name: 'BRENT',    ...indices.brent  },
+    { name: 'EWZ',      ...indices.ewz    },
+    { name: 'R.PAÍS',   val: indices.riesgo_pais?.val, var: indices.riesgo_pais?.var }
+  ];
+
+  const html = [...items, ...items].map(it => `
+    <div class="ticker-item">
+      <span class="ticker-name">${it.name}</span>
+      <span class="ticker-val">${it.val || '—'}</span>
+      <span class="ticker-var ${varClass(it.var)}">${varArrow(it.var)}${it.var ? Math.abs(parseFloat(it.var)).toFixed(2)+'%' : ''}</span>
+    </div>
+  `).join('');
+  $('ticker-inner').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────
+// ÍNDICES GRID
+// ─────────────────────────────────────────────────────────
+const INDEX_META = [
+  { key: 'sp500',  label: 'S&P 500',    prefix: '' },
+  { key: 'nasdaq', label: 'NASDAQ',     prefix: '' },
+  { key: 'merval', label: 'MERVAL',     prefix: '' },
+  { key: 'vix',    label: 'VIX',        prefix: '' },
+  { key: 'wti',    label: 'WTI (CL)',   prefix: '$' },
+  { key: 'brent',  label: 'BRENT (BZ)', prefix: '$' },
+  { key: 'ewz',    label: 'EWZ (LATAM)',prefix: '$' },
+  { key: 'riesgo_pais', label: 'R.PAÍS (bps)', prefix: '' }
+];
+
+function buildIndices(indices) {
+  const grid = $('indices-grid');
+  grid.innerHTML = INDEX_META.map(m => {
+    const d   = indices[m.key] || {};
+    const val = d.val || '—';
+    const vr  = d.var || '0';
+    const bw  = barWidth(vr);
+    const bc  = parseFloat(vr) >= 0 ? 'var(--green)' : 'var(--red)';
+    return `
+      <div class="index-cell">
+        <div class="index-name">${m.label}</div>
+        <div class="index-value">${m.prefix}${val}</div>
+        <div class="index-var ${varClass(vr)}">${varArrow(vr)} ${Math.abs(parseFloat(vr)||0).toFixed(2)}%</div>
+        <div class="index-bar">
+          <div class="index-bar-fill" style="width:${bw}%; background:${bc};"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+// NOTICIAS
+// ─────────────────────────────────────────────────────────
+function buildNoticias(noticias, containerId, badgeId) {
+  const el = $(containerId);
+  if (!noticias || !noticias.length) {
+    el.innerHTML = '<div style="color:var(--text2);font-size:.75rem;font-family:var(--mono)">SIN DATOS</div>';
+    return;
+  }
+  el.innerHTML = noticias.map(n => `
+    <div class="news-item">
+      <span class="news-badge ${badgeClass(n.impacto)}">${n.impacto.replace('🔴 ','').replace('🟢 ','').replace('⚪ ','')}</span>
+      <div class="news-content">
+        <div class="news-title">
+          <a href="${n.link || '#'}" target="_blank" rel="noopener">${n.titulo}</a>
+        </div>
+        <div class="news-just">${n.justificacion}</div>
+        <div class="news-meta">${n.fuente}${n.fecha ? ' · ' + n.fecha.slice(0,16) : ''}</div>
+      </div>
+    </div>`).join('');
+  flash(el);
+  if (badgeId) $(badgeId).textContent = `${noticias.length} EVENTOS`;
+}
+
+// ─────────────────────────────────────────────────────────
+// DÓLARES
+// ─────────────────────────────────────────────────────────
+function buildFX(dolares) {
+  const items = [
+    { name: 'USD CCL',     key: 'ccl'     },
+    { name: 'USD OFICIAL', key: 'oficial' },
+    { name: 'USD BLUE',    key: 'blue'    }
+  ];
+  $('fx-grid').innerHTML = items.map(it => {
+    const d  = dolares[it.key] || {};
+    const v  = d.val || '—';
+    const vr = d.var || '0';
+    return `
+      <div class="fx-cell">
+        <div class="fx-name">${it.name}</div>
+        <div class="fx-val">$${v}</div>
+        <div class="fx-var ${varClass(vr)}">${varArrow(vr)} ${Math.abs(parseFloat(vr)||0).toFixed(2)}%</div>
+      </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+// SENTIMIENTO
+// ─────────────────────────────────────────────────────────
+function buildSentimiento(sent) {
+  const c = sentimentColor(sent.color);
+
+  // Estado
+  const estadoEl = $('sent-estado');
+  estadoEl.textContent = sent.estado;
+  estadoEl.style.color = c;
+
+  // Score badge
+  $('sent-score-badge').textContent = `SCORE: ${sent.score > 0 ? '+' : ''}${sent.score}`;
+  $('sent-score-badge').style.color = c;
+
+  // Card accent
+  const card = $('card-sentimiento');
+  card.style.setProperty('--card-accent', c);
+  card.querySelector('.card::before') // handled via CSS class
+  // Ajustamos el border-left via el pseudo-elemento de forma indirecta con una clase
+  card.className = 'card';
+
+  // Factores – split por " · "
+  const factors = sent.justificacion.split(' · ').filter(Boolean);
+  $('sent-factors').innerHTML = factors.map(f =>
+    `<div class="factor-item">${f}</div>`
+  ).join('');
+
+  flash($('sent-factors'));
+}
+
+// ─────────────────────────────────────────────────────────
+// COUNTDOWN
+// ─────────────────────────────────────────────────────────
+function startCountdown() {
+  clearInterval(countdownTimer);
+  countdown = INTERVAL / 1000;
+  countdownTimer = setInterval(() => {
+    countdown--;
+    const m = Math.floor(countdown / 60);
+    const s = countdown % 60;
+    $('countdown').textContent = `próx. en ${m}:${String(s).padStart(2,'0')}`;
+    if (countdown <= 0) {
+      fetchDashboard();
+    }
+  }, 1000);
+}
+
+// ─────────────────────────────────────────────────────────
+// FETCH PRINCIPAL
+// ─────────────────────────────────────────────────────────
+async function fetchDashboard(manual = false) {
+  const dot = $('status-dot');
+  dot.style.background = 'var(--amber)';
+  if (manual) countdown = INTERVAL / 1000;
+
+  try {
+    const res  = await fetch(API_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    // Ticker tape
+    buildTicker(data.indices);
+
+    // Índices
+    buildIndices(data.indices);
+
+    // Alerta roja
+    buildNoticias(data.alerta_roja, 'alerta-roja-list', 'alerta-badge');
+
+    // Dólares
+    buildFX(data.contexto_arg.dolares);
+
+    // Riesgo país
+    const rp = data.indices.riesgo_pais || {};
+    $('riesgo-val').textContent = rp.val ? `${rp.val} bps` : '—';
+    const rpVar = $('riesgo-var');
+    rpVar.textContent = rp.var ? `${varArrow(rp.var)} ${Math.abs(parseFloat(rp.var)).toFixed(2)}%` : '';
+    rpVar.className   = `index-var ${varClass(rp.var || '0')}`;
+
+    // Noticias Argentina
+    buildNoticias(data.contexto_arg.noticias, 'arg-noticias-list', null);
+
+    // Sentimiento
+    buildSentimiento(data.sentimiento);
+
+    // Meta
+    const ts = data.timestamp
+      ? new Date(data.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      : new Date().toLocaleTimeString('es-AR');
+    $('last-update').textContent = `ULT. ACT: ${ts}`;
+    dot.style.background = 'var(--green)';
+    dot.style.boxShadow  = '0 0 8px var(--green)';
+
+    startCountdown();
+    $('loading').classList.add('hide');
+
+  } catch (err) {
+    console.error('Error fetching dashboard:', err);
+    dot.style.background = 'var(--red)';
+    dot.style.boxShadow  = '0 0 8px var(--red)';
+    $('last-update').textContent = `ERROR · ${new Date().toLocaleTimeString('es-AR')}`;
+    $('loading').classList.add('hide');
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────
+fetchDashboard();
+</script>
 </body>
 </html>
