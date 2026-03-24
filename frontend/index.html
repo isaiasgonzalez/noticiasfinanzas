@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard PM - Emerging & WS</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db; }
+        .card.red { border-left-color: #e74c3c; }
+        .card.green { border-left-color: #2ecc71; }
+        h2 { margin-top: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+        p { font-size: 1rem; line-height: 1.5; }
+        .timestamp { color: #888; font-size: 0.8rem; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>Portfolio Manager | Live Feed</h1>
+    <div class="timestamp" id="last-update">Actualizando...</div>
+
+    <div class="grid">
+        <div class="card red" id="card-alerta">
+            <h2>🚨 Alerta Roja</h2>
+            <p id="alerta-roja">Cargando eventos black swan...</p>
+        </div>
+
+        <div class="card" id="card-indices">
+            <h2>📈 Monitor de Índices</h2>
+            <p><strong>S&P 500:</strong> <span id="sp500">-</span></p>
+            <p><strong>Nasdaq:</strong> <span id="nasdaq">-</span></p>
+            <p><strong>Merval / Riesgo País:</strong> <span id="merval">-</span></p>
+        </div>
+
+        <div class="card" id="card-arg">
+            <h2>🇦🇷 Contexto Argentino</h2>
+            <p id="brecha">-</p>
+            <p id="bcra">-</p>
+        </div>
+
+        <div class="card green" id="card-sentimiento">
+            <h2>🧠 Sentimiento de Mercado</h2>
+            <p id="sentimiento" style="font-weight: bold; font-size: 1.5rem;">-</p>
+        </div>
+    </div>
+
+    <script>
+        async function fetchDashboard() {
+            try {
+                // Llama al backend local
+                const response = await fetch('https://noticiasfinanzas.onrender.com/api/dashboard');
+                const data = await response.json();
+
+                document.getElementById('alerta-roja').innerHTML = data.alerta_roja.join('<br><br>');
+                document.getElementById('sp500').innerText = data.indices.sp500;
+                document.getElementById('nasdaq').innerText = data.indices.nasdaq;
+                document.getElementById('merval').innerText = data.indices.merval_proxy;
+                
+                document.getElementById('brecha').innerText = data.contexto_arg.brecha;
+                document.getElementById('bcra').innerText = data.contexto_arg.bcra;
+                
+                const sentEl = document.getElementById('sentimiento');
+                sentEl.innerText = data.sentimiento;
+                sentEl.style.color = data.sentimiento.includes('Risk-on') ? '#2ecc71' : '#e74c3c';
+
+                document.getElementById('last-update').innerText = "Última actualización: " + new Date().toLocaleTimeString();
+            } catch (error) {
+                console.error("Error trayendo data. Fijate si el backend está levantado.", error);
+            }
+        }
+
+        // Ejecutar al inicio y luego cada 3 minutos (180000 ms)
+        fetchDashboard();
+        setInterval(fetchDashboard, 180000);
+    </script>
+</body>
+</html>
